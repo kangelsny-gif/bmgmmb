@@ -31,7 +31,7 @@
     }
 
     .top-fixed-zone {
-        flex-shrink: 0;
+        flex-shrink: 0; /* Không bị co lại */
         background: #fff;
         z-index: 100;
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
@@ -117,7 +117,7 @@
         background-color: var(--color-primary-bg); color: var(--color-primary); border-color: var(--color-primary);
         font-weight: 700; box-shadow: 0 0 0 1px var(--color-primary);
     }
-
+    
     .d-none { display: none !important; }
     .hidden { display: none !important; }
 
@@ -149,6 +149,7 @@
             <h2>Tìm Truyện Đam Mỹ</h2>
         </div>
 
+        <!-- Đưa thanh tìm kiếm lên đây -->
         <div class="search-bar-container">
             <input type="text" id="search-input" class="search-input" placeholder="🔍 Tìm nhanh tag..." autocomplete="off">
             <button type="button" id="toggle-view-btn" class="toggle-btn">👁️ Hiện Tag</button>
@@ -161,11 +162,19 @@
         </div>
     </div>
 
+    <!-- PHẦN CUỘN Ở GIỮA -->
     <div class="main-scroll-area" id="main-scroller">
+        <!-- Khu vực Bộ Lọc Chung -->
         <div id="general-area"></div>
+        
+        <!-- Khu vực Tag Chi Tiết -->
         <div id="detailed-area"></div>
+        
+        <!-- Khoảng trắng đệm để không bị sát đáy quá -->
         <div style="height: 20px;"></div>
     </div>
+
+    <!-- PHẦN CỐ ĐỊNH DƯỚI CÙNG: Nút bấm -->
     <div class="bottom-actions-zone">
         <button type="button" id="reset-btn" class="action-btn btn-reset">Chọn lại</button>
         <button type="button" id="submit-btn" class="action-btn btn-submit">TÌM TRUYỆN NGAY</button>
@@ -175,7 +184,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // --- DỮ LIỆU ---
     const generalFiltersData = {
         "Tình trạng": [ {text: "Hoàn", value: "hoan"}, {text: "Chưa hoàn", value: "chua-hoan"}, {text: "Drop", value: "drop"} ],
         "Thời đại": [ {text: "Cổ đại", value: "co-dai"}, {text: "Hiện đại", value: "hien-dai"}, {text: "Cận đại", value: "can-dai"}, {text: "Tương lai", value: "tuong-lai"} ],
@@ -196,7 +204,7 @@ document.addEventListener('DOMContentLoaded', function() {
             {text: "Đô thị tình duyên", value: "do-thi-tinh-duyen"}, {text: "Tam giáo cửu lưu", value: "tam-giao-cuu-luu"}, {text: "Hắc bang", value: "hac-bang"}, 
             {text: "Chức trường", value: "chuc-truong"}, {text: "Giang hồ ân oán", value: "giang-ho-an-oan"}, {text: "Niên đại văn", value: "nien-dai-van"}, 
             {text: "Truyện cổ tích", value: "truyen-co-tich"}, {text: "Tĩnh Khang chi sỉ", value: "tinh-khang-chi-si"}, {text: "Thiên tai", value: "thien-tai"}, 
-            {text: "Đệ tứ thiên tai", value: "de-tu-thien-tai"}, {text: "Lưu đày", value: "luu-day"}, {text: "Chạy nạn", value: "chay-nan"}, 
+            {text: "Đệ tứ thiên tai", value: "de-tu-thien-tai"}, {text: "Lưu đày", value: "luu-day"},
             {text: "Lịch sử", value: "lich-su"}, {text: "Giả tưởng lịch sử", value: "gia-tuong-lich-su"}, {text: "Giả tưởng", value: "gia-tuong"}, {text: "Hồng Kông", value: "hong-kong"}, 
             {text: "Học viện quý tộc", value: "hoc-vien-quy-toc"}, {text: "Khoa cử", value: "khoa-cu"}, {text: "Làm giàu", value: "lam-giau"}, 
             {text: "Đổ thạch", value: "do-thach"}, {text: "Phong thủy", value: "phong-thuy"}, {text: "Trộm mộ", value: "trom-mo"}, 
@@ -375,23 +383,23 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // --- ELEMENTS ---
-    const mainListEl = document.getElementById('main-list');
     const selectedContainerEl = document.getElementById('selected-container');
     const searchInput = document.getElementById('search-input');
     const submitBtn = document.getElementById('submit-btn');
     const resetBtn = document.getElementById('reset-btn');
     const toggleViewBtn = document.getElementById('toggle-view-btn');
     
-    // Container riêng cho bộ lọc chung và chi tiết
+    // Container
     const generalArea = document.getElementById('general-area');
     const detailedArea = document.getElementById('detailed-area');
+    const mainScroller = document.getElementById('main-scroller');
 
     let selectedTags = new Set();
-    let isListExpanded = true;
+    let isListExpanded = false; 
 
     // --- RENDER ---
     function renderTags() {
-        // 1. Render Bộ Lọc Chung (Luôn Hiện)
+        // 1. Render Bộ Lọc Chung
         generalArea.innerHTML = '';
         const generalTitle = document.createElement('div');
         generalTitle.className = 'section-title';
@@ -399,23 +407,28 @@ document.addEventListener('DOMContentLoaded', function() {
         generalArea.appendChild(generalTitle);
 
         for (const [subGroup, tags] of Object.entries(generalFiltersData)) {
+            const groupContainer = document.createElement('div');
+            groupContainer.className = 'sub-section-container';
+
             const subTitle = document.createElement('div');
             subTitle.className = 'sub-section-title';
             subTitle.textContent = subGroup;
-            generalArea.appendChild(subTitle);
+            groupContainer.appendChild(subTitle);
 
             const grid = document.createElement('div');
             grid.className = 'tag-grid';
             tags.forEach(tag => grid.appendChild(createTagElement(tag)));
-            generalArea.appendChild(grid);
+            groupContainer.appendChild(grid);
+            
+            generalArea.appendChild(groupContainer);
         }
 
-        // 2. Render Các Tag Khác (Có thể ẩn)
+        // 2. Render Các Tag Khác
         detailedArea.innerHTML = '';
         for (const [groupName, tags] of Object.entries(detailedTagsData)) {
-            // Bao mỗi group trong 1 container để dễ ẩn/hiện cả cục
             const groupContainer = document.createElement('div');
-            groupContainer.className = 'detailed-group-container'; // Class để target ẩn/hiện
+            groupContainer.className = 'detailed-group-container section-container';
+            groupContainer.classList.add('d-none'); // Mặc định ẩn
 
             const groupTitle = document.createElement('div');
             groupTitle.className = 'section-title';
@@ -441,7 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return el;
     }
 
-    // --- LOGIC ---
+    // --- LOGIC CHỌN TAG ---
     function toggleTag(slug) {
         if (selectedTags.has(slug)) selectedTags.delete(slug);
         else selectedTags.add(slug);
@@ -471,7 +484,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const chip = document.createElement('div');
             chip.className = 'chip';
-            chip.innerHTML = `${text} <span class="remove">&times;</span>`;
+            chip.innerHTML = `${text} &times;`;
             chip.onclick = () => toggleTag(slug);
             selectedContainerEl.appendChild(chip);
         });
@@ -480,73 +493,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- LOGIC TÌM KIẾM ---
     function performSearch(term) {
-        // 1. Xử lý Bộ Lọc Chung (Tìm thì hiện, không thì thôi - nhưng mặc định nó luôn hiện rồi)
-        // Trong yêu cầu này: "Lúc ghi tag thì cả phần bộ lọc chung cũng bị ẩn tự động nếu không trùng tag"
-        // => Nghĩa là khi tìm kiếm, cái gì không trùng thì ẩn đi hết.
-        
-        // Quét Bộ Lọc Chung
-        const generalGroups = generalArea.querySelectorAll('.sub-section-title');
+        mainScroller.scrollTop = 0;
+
+        const generalContainers = generalArea.querySelectorAll('.sub-section-container');
         let generalHasMatch = false;
-        
-        generalGroups.forEach(title => {
-            const grid = title.nextElementSibling;
-            const items = grid.querySelectorAll('.tag-item');
+
+        generalContainers.forEach(container => {
+            const items = container.querySelectorAll('.tag-item');
             let groupMatch = false;
-            
             items.forEach(item => {
                 const text = item.dataset.text.toLowerCase();
                 const isMatch = term === '' || text.includes(term);
-                if (isMatch) {
-                    item.classList.remove('hidden');
-                    groupMatch = true;
-                    generalHasMatch = true;
-                } else {
-                    item.classList.add('hidden');
-                }
+                item.classList.toggle('hidden', !isMatch);
+                if (isMatch) { groupMatch = true; generalHasMatch = true; }
             });
-
-            // Nếu group không có item nào hiện -> ẩn title
-            if (groupMatch) title.classList.remove('hidden');
-            else title.classList.add('hidden');
+            container.classList.toggle('d-none', term !== '' && !groupMatch);
         });
 
-        // Ẩn tiêu đề "Bộ Lọc Chung" nếu không có gì khớp bên trong
-        const generalMainTitle = generalArea.querySelector('.section-title');
-        if (generalHasMatch) generalMainTitle.classList.remove('hidden');
-        else generalMainTitle.classList.add('hidden');
-
-
-        // 2. Xử lý Tag Chi Tiết
-        const detailedGroups = detailedArea.querySelectorAll('.detailed-group-container');
+        const generalTitle = generalArea.querySelector('.section-title');
+        if (generalTitle) generalTitle.classList.toggle('d-none', term !== '' && !generalHasMatch);
         
+        const detailedGroups = detailedArea.querySelectorAll('.detailed-group-container');
         detailedGroups.forEach(group => {
             const items = group.querySelectorAll('.tag-item');
             let groupMatch = false;
-
             items.forEach(item => {
                 const text = item.dataset.text.toLowerCase();
                 const isMatch = term === '' || text.includes(term);
-                if (isMatch) {
-                    item.classList.remove('hidden');
-                    groupMatch = true;
-                } else {
-                    item.classList.add('hidden');
-                }
+                item.classList.toggle('hidden', !isMatch);
+                if (isMatch) groupMatch = true;
             });
-
-            // Nếu tìm kiếm có kết quả -> Luôn hiện Group đó (Bất kể đang ở chế độ Ẩn hay Hiện)
-            if (groupMatch) {
-                group.classList.remove('d-none'); // Force hiện
-                group.querySelector('.section-title').classList.remove('hidden');
+            if (term !== '') {
+                group.classList.toggle('d-none', !groupMatch);
             } else {
-                // Nếu không khớp
-                if (term !== '') {
-                    group.classList.add('d-none'); // Ẩn đi khi đang tìm mà ko thấy
-                } else {
-                    // Nếu không tìm kiếm (term == ''), trả về trạng thái của nút Toggle
-                    if (!isListExpanded) group.classList.add('d-none');
-                    else group.classList.remove('d-none');
-                }
+                group.classList.toggle('d-none', !isListExpanded);
             }
         });
     }
@@ -555,28 +535,16 @@ document.addEventListener('DOMContentLoaded', function() {
         performSearch(e.target.value.toLowerCase().trim());
     });
 
-    // --- TOGGLE VIEW ---
+    // --- TOGGLE BUTTON ---
     toggleViewBtn.addEventListener('click', () => {
         isListExpanded = !isListExpanded;
+        if (searchInput.value.trim() !== '') searchInput.value = '';
+        
         const detailedGroups = detailedArea.querySelectorAll('.detailed-group-container');
+        detailedGroups.forEach(g => g.classList.toggle('d-none', !isListExpanded));
         
-        // Nếu đang có từ khóa tìm kiếm -> Reset tìm kiếm
-        if (searchInput.value.trim() !== '') {
-            searchInput.value = '';
-            // Khi clear search, cần chạy lại logic hiển thị dựa trên trạng thái mới
-            // performSearch(''); -> Logic này nằm ở dưới
-        }
-
-        if (isListExpanded) {
-            detailedGroups.forEach(g => g.classList.remove('d-none'));
-            toggleViewBtn.innerHTML = '👁️ Ẩn Tag Khác';
-        } else {
-            detailedGroups.forEach(g => g.classList.add('d-none'));
-            toggleViewBtn.innerHTML = '👁️ Hiện Tag Khác';
-        }
-        
-        // Chạy lại search rỗng để reset hiển thị đúng trạng thái
-        performSearch('');
+        toggleViewBtn.innerHTML = isListExpanded ? '👁️ Ẩn Tag' : '👁️ Hiện Tag';
+        performSearch(''); 
     });
 
     // --- BUTTONS ---
@@ -595,11 +563,9 @@ document.addEventListener('DOMContentLoaded', function() {
         window.open('https://tonghopdammeoo.wordpress.com/tag/' + slugs.join('+'), '_blank');
     });
 
-    // Init
+    // START
     renderTags();
 });
 </script>
 </body>
 </html>
-
-
