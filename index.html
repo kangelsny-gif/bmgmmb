@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Tool Tìm Truyện Đam Mỹ Pro</title>
+<title>Tool Tìm Truyện Đam Mỹ</title>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
     
@@ -31,7 +31,6 @@
         position: relative;
     }
 
-    /* --- KHU VỰC CỐ ĐỊNH PHÍA TRÊN (HEADER + SEARCH + SELECTED) --- */
     .top-fixed-zone {
         flex-shrink: 0; /* Không bị co lại */
         background: #fff;
@@ -45,7 +44,6 @@
     }
     .tool-header h2 { font-size: 1.2rem; margin: 0; color: var(--color-primary); font-weight: 800; text-transform: uppercase; }
 
-    /* Thanh tìm kiếm đưa lên trên */
     .search-bar-container {
         padding: 10px 15px;
         background: #fdfbfd;
@@ -55,7 +53,6 @@
     .search-input {
         flex: 1; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 8px;
         font-size: 1rem; outline: none; transition: border-color 0.2s;
-        /* Ngăn font bị zoom trên iOS */
         font-size: 16px; 
     }
     .search-input:focus { border-color: var(--color-primary); background: #fff; }
@@ -66,7 +63,6 @@
         display: flex; align-items: center; justify-content: center; white-space: nowrap;
     }
 
-    /* Khu vực Selected Tags */
     .sticky-selected-zone {
         background: rgba(255, 255, 255, 0.98); 
         border-bottom: 1px solid var(--border-color);
@@ -89,19 +85,16 @@
     }
     @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-    /* --- KHU VỰC CUỘN CHÍNH (BODY) --- */
     .main-scroll-area {
-        flex-grow: 1; /* Chiếm toàn bộ không gian còn lại */
-        overflow-y: auto; /* Cho phép cuộn */
+        flex-grow: 1;
+        overflow-y: auto;
         overflow-x: hidden;
         padding: 15px 15px 20px 15px;
         background: #fdfbfd;
-        -webkit-overflow-scrolling: touch; /* Cuộn mượt trên iOS */
-        /* Quan trọng: min-height 0 để flex hoạt động đúng trong lồng nhau */
+        -webkit-overflow-scrolling: touch;
         min-height: 0; 
     }
 
-    /* Tag Styles */
     .section-title {
         font-size: 1em; font-weight: 800; color: var(--color-primary); margin: 20px 0 10px 0;
         padding-bottom: 5px; border-bottom: 2px solid #f3e8ff; text-transform: uppercase;
@@ -119,26 +112,22 @@
         display: block; padding: 7px 12px; background: #fff; border: 1px solid #d1d5db; border-radius: 10px;
         font-size: 0.9em; font-weight: 500; cursor: pointer; user-select: none; color: #374151;
         box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-align: center;
-        /* Tối ưu hiệu năng render */
         will-change: transform;
     }
     .tag-item.active {
         background-color: var(--color-primary-bg); color: var(--color-primary); border-color: var(--color-primary);
         font-weight: 700; box-shadow: 0 0 0 1px var(--color-primary);
     }
-    
-    /* Ẩn hiện */
+
     .d-none { display: none !important; }
     .hidden { display: none !important; }
 
-    /* --- KHU VỰC CỐ ĐỊNH PHÍA DƯỚI (BUTTONS) --- */
     .bottom-actions-zone {
         flex-shrink: 0;
         background: #fff; border-top: 1px solid var(--border-color);
         padding: 10px 15px; 
         display: flex; gap: 10px;
         z-index: 50;
-        /* Khắc phục lỗi iOS bottom bar */
         padding-bottom: calc(10px + env(safe-area-inset-bottom));
     }
 
@@ -155,14 +144,12 @@
 <body>
 
 <div id="app-container">
-    
-    <!-- PHẦN CỐ ĐỊNH TRÊN CÙNG: Header + Search + Selected -->
+
     <div class="top-fixed-zone">
         <div class="tool-header">
             <h2>Tìm Truyện Đam Mỹ</h2>
         </div>
 
-        <!-- Đưa thanh tìm kiếm lên đây -->
         <div class="search-bar-container">
             <input type="text" id="search-input" class="search-input" placeholder="🔍 Tìm nhanh tag..." autocomplete="off">
             <button type="button" id="toggle-view-btn" class="toggle-btn">👁️ Hiện Tag</button>
@@ -175,19 +162,11 @@
         </div>
     </div>
 
-    <!-- PHẦN CUỘN Ở GIỮA -->
     <div class="main-scroll-area" id="main-scroller">
-        <!-- Khu vực Bộ Lọc Chung -->
         <div id="general-area"></div>
-        
-        <!-- Khu vực Tag Chi Tiết -->
         <div id="detailed-area"></div>
-        
-        <!-- Khoảng trắng đệm để không bị sát đáy quá -->
         <div style="height: 20px;"></div>
     </div>
-
-    <!-- PHẦN CỐ ĐỊNH DƯỚI CÙNG: Nút bấm -->
     <div class="bottom-actions-zone">
         <button type="button" id="reset-btn" class="action-btn btn-reset">Chọn lại</button>
         <button type="button" id="submit-btn" class="action-btn btn-submit">TÌM TRUYỆN NGAY</button>
@@ -206,7 +185,6 @@ document.addEventListener('DOMContentLoaded', function() {
         "Kết thúc": [ {text: "HE", value: "he"}, {text: "SE", value: "se"}, {text: "BE", value: "be"}, {text: "OE", value: "oe"} ]
     };
 
-    // COPY FULL DATA DETAILED CỦA BẠN VÀO ĐÂY
     const detailedTagsData = { 
         "Bối Cảnh & Thế Giới": [
             {text: "Tiên hiệp", value: "tien-hiep"}, {text: "Huyền huyễn", value: "huyen-huyen"}, {text: "Tận thế", value: "tan-the"}, {text: "Khoa học viễn tưởng", value: "khoa-hoc-vien-tuong"}, 
@@ -444,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
         for (const [groupName, tags] of Object.entries(detailedTagsData)) {
             const groupContainer = document.createElement('div');
             groupContainer.className = 'detailed-group-container section-container';
-            groupContainer.classList.add('d-none'); // Mặc định ẩn
+            groupContainer.classList.add('d-none');
 
             const groupTitle = document.createElement('div');
             groupTitle.className = 'section-title';
@@ -586,4 +564,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 </body>
+
 </html>
