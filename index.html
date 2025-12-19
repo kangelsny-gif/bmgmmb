@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tool Tìm Truyện Đam Mỹ Pro</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
+    
+    :root {
+        --color-primary: #9333ea;
+        --color-primary-bg: #f3e8ff;
+        --color-text: #374151;
+        --bg-body: #fdf6fd;
+        --border-color: #e9d5ff;
+        /* Chiều cao an toàn cho mobile */
+        --app-height: 100%;
+    }
+
+    html, body {
+        margin: 0; padding: 0; background: var(--bg-body); 
+        font-family: 'Be Vietnam Pro', sans-serif;
+        color: var(--color-text); 
+        width: 100%; height: 100%; overflow: hidden; /* Chặn cuộn body */
+    }
+
+    #app-container {
+        display: flex; flex-direction: column;
+        height: 100%; width: 100%; max-width: 900px; margin: 0 auto;
+        background: #fff; box-shadow: 0 0 20px rgba(147, 51, 234, 0.1);
+        position: relative;
+    }
+
+    /* --- KHU VỰC CỐ ĐỊNH PHÍA TRÊN (HEADER + SEARCH + SELECTED) --- */
+    .top-fixed-zone {
+        flex-shrink: 0; /* Không bị co lại */
+        background: #fff;
+        z-index: 100;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .tool-header {
+        padding: 10px 15px; text-align: center; border-bottom: 1px solid var(--border-color);
+        background: #fff;
+    }
+    .tool-header h2 { font-size: 1.2rem; margin: 0; color: var(--color-primary); font-weight: 800; text-transform: uppercase; }
+
+    /* Thanh tìm kiếm đưa lên trên */
+    .search-bar-container {
+        padding: 10px 15px;
+        background: #fdfbfd;
+        border-bottom: 1px solid #f3f4f6;
+        display: flex; gap: 8px;
+    }
+    .search-input {
+        flex: 1; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 8px;
+        font-size: 1rem; outline: none; transition: border-color 0.2s;
+        /* Ngăn font bị zoom trên iOS */
+        font-size: 16px; 
+    }
+    .search-input:focus { border-color: var(--color-primary); background: #fff; }
+    
+    .toggle-btn {
+        padding: 0 12px; border: 1px solid #e5e7eb; background: #fff; color: #4b5563;
+        border-radius: 8px; font-weight: 600; font-size: 0.85em; cursor: pointer;
+        display: flex; align-items: center; justify-content: center; white-space: nowrap;
+    }
+
+    /* Khu vực Selected Tags */
+    .sticky-selected-zone {
+        background: rgba(255, 255, 255, 0.98); 
+        border-bottom: 1px solid var(--border-color);
+        padding: 8px 15px; 
+        min-height: 45px;
+        display: flex; align-items: center;
+    }
+    .selected-tags-container {
+        display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; width: 100%; align-items: center; 
+        scrollbar-width: none; padding-bottom: 2px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .selected-tags-container::-webkit-scrollbar { display: none; }
+    .empty-placeholder { font-size: 0.85em; color: #9ca3af; font-style: italic; }
+
+    .chip {
+        background: var(--color-primary); color: white; padding: 4px 10px; border-radius: 15px; font-size: 0.8em; font-weight: 600;
+        display: inline-flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+        animation: popIn 0.2s ease;
+    }
+    @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    /* --- KHU VỰC CUỘN CHÍNH (BODY) --- */
+    .main-scroll-area {
+        flex-grow: 1; /* Chiếm toàn bộ không gian còn lại */
+        overflow-y: auto; /* Cho phép cuộn */
+        overflow-x: hidden;
+        padding: 15px 15px 20px 15px;
+        background: #fdfbfd;
+        -webkit-overflow-scrolling: touch; /* Cuộn mượt trên iOS */
+        /* Quan trọng: min-height 0 để flex hoạt động đúng trong lồng nhau */
+        min-height: 0; 
+    }
+
+    /* Tag Styles */
+    .section-title {
+        font-size: 1em; font-weight: 800; color: var(--color-primary); margin: 20px 0 10px 0;
+        padding-bottom: 5px; border-bottom: 2px solid #f3e8ff; text-transform: uppercase;
+    }
+    .section-title:first-child { margin-top: 5px; }
+    
+    .sub-section-title {
+        font-size: 0.9em; font-weight: 700; color: #6b21a8; margin: 12px 0 8px 0; display: flex; align-items: center; gap: 6px;
+    }
+    .sub-section-title::before { content: ''; display: block; width: 4px; height: 4px; background: #6b21a8; border-radius: 50%; }
+
+    .tag-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .tag-item {
+        display: block; padding: 7px 12px; background: #fff; border: 1px solid #d1d5db; border-radius: 10px;
+        font-size: 0.9em; font-weight: 500; cursor: pointer; user-select: none; color: #374151;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-align: center;
+        /* Tối ưu hiệu năng render */
+        will-change: transform;
+    }
+    .tag-item.active {
+        background-color: var(--color-primary-bg); color: var(--color-primary); border-color: var(--color-primary);
+        font-weight: 700; box-shadow: 0 0 0 1px var(--color-primary);
+    }
+    
+    /* Ẩn hiện */
+    .d-none { display: none !important; }
+    .hidden { display: none !important; }
+
+    /* --- KHU VỰC CỐ ĐỊNH PHÍA DƯỚI (BUTTONS) --- */
+    .bottom-actions-zone {
+        flex-shrink: 0;
+        background: #fff; border-top: 1px solid var(--border-color);
+        padding: 10px 15px; 
+        display: flex; gap: 10px;
+        z-index: 50;
+        /* Khắc phục lỗi iOS bottom bar */
+        padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    }
+
+    .action-btn {
+        padding: 12px; border: none; border-radius: 10px; font-weight: 700; font-size: 0.95em; cursor: pointer;
+        text-transform: uppercase; transition: opacity 0.1s;
+    }
+    .action-btn:active { opacity: 0.8; }
+    .btn-submit { background: var(--color-primary); color: #fff; flex: 2; box-shadow: 0 4px 6px rgba(147, 51, 234, 0.2); }
+    .btn-reset { background: #f3f4f6; color: #4b5563; flex: 1; }
+
+</style>
+</head>
+<body>
+
+<div id="app-container">
+    
+    <!-- PHẦN CỐ ĐỊNH TRÊN CÙNG: Header + Search + Selected -->
+    <div class="top-fixed-zone">
+        <div class="tool-header">
+            <h2>Tìm Truyện Đam Mỹ</h2>
+        </div>
+
+        <!-- Đưa thanh tìm kiếm lên đây -->
+        <div class="search-bar-container">
+            <input type="text" id="search-input" class="search-input" placeholder="🔍 Tìm nhanh tag..." autocomplete="off">
+            <button type="button" id="toggle-view-btn" class="toggle-btn">👁️ Hiện Tag</button>
+        </div>
+
+        <div class="sticky-selected-zone">
+            <div class="selected-tags-container" id="selected-container">
+                <div class="empty-placeholder">Đang chờ chọn tag...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PHẦN CUỘN Ở GIỮA -->
+    <div class="main-scroll-area" id="main-scroller">
+        <!-- Khu vực Bộ Lọc Chung -->
+        <div id="general-area"></div>
+        
+        <!-- Khu vực Tag Chi Tiết -->
+        <div id="detailed-area"></div>
+        
+        <!-- Khoảng trắng đệm để không bị sát đáy quá -->
+        <div style="height: 20px;"></div>
+    </div>
+
+    <!-- PHẦN CỐ ĐỊNH DƯỚI CÙNG: Nút bấm -->
+    <div class="bottom-actions-zone">
+        <button type="button" id="reset-btn" class="action-btn btn-reset">Chọn lại</button>
+        <button type="button" id="submit-btn" class="action-btn btn-submit">TÌM TRUYỆN NGAY</button>
+    </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- DỮ LIỆU (ĐÃ RÚT GỌN ĐỂ DEMO - Bạn thay thế lại bằng full data cũ của bạn nhé) ---
+    // (Tôi giữ nguyên logic render, chỉ paste lại data cũ vào đây là chạy)
+    const generalFiltersData = {
+        "Tình trạng": [ {text: "Hoàn", value: "hoan"}, {text: "Chưa hoàn", value: "chua-hoan"}, {text: "Drop", value: "drop"} ],
+        "Thời đại": [ {text: "Cổ đại", value: "co-dai"}, {text: "Hiện đại", value: "hien-dai"}, {text: "Cận đại", value: "can-dai"}, {text: "Tương lai", value: "tuong-lai"} ],
+        "Độ dài": [ {text: "Dưới 100c", value: "duoi-100-chuong"}, {text: "Trên 100c", value: "tren-100-chuong"} ],
+        "Kết thúc": [ {text: "HE", value: "he"}, {text: "SE", value: "se"}, {text: "BE", value: "be"}, {text: "OE", value: "oe"} ]
+    };
+
+    // COPY FULL DATA DETAILED CỦA BẠN VÀO ĐÂY
+    const detailedTagsData = { 
+        "Bối Cảnh & Thế Giới": [
+            {text: "Tiên hiệp", value: "tien-hiep"}, {text: "Huyền huyễn", value: "huyen-huyen"}, {text: "Tận thế", value: "tan-the"}, {text: "Khoa học viễn tưởng", value: "khoa-hoc-vien-tuong"}, 
+            {text: "Mạt thế", value: "mat-the"}, {text: "Võ hiệp", value: "vo-hiep"}, {text: "Chính kịch", value: "chinh-kich"}, {text: "Tinh tế", value: "tinh-te"}, {text: "Phim ảnh", value: "phim-anh"}, 
+            {text: "Manga anime", value: "manga-anime"}, {text: "Nam nam thế giới", value: "nam-nam-the-gioi"}, {text: "Thế giới song song", value: "the-gioi-song-song"}, 
+            {text: "Nguyên thủy", value: "nguyen-thuy"}, {text: "Cyberpunk", value: "cyberpunk"}, {text: "Steampunk", value: "steampunk"}, 
+            {text: "Phế thổ", value: "phe-tho"}, {text: "Cao võ thế giới", value: "cao-vo-the-gioi"}, {text: "Trò chơi xâm lấn", value: "tro-choi-xam-lan"}, 
+            {text: "Linh khí sống lại", value: "linh-khi-song-lai"}, {text: "Ảo tưởng không gian", value: "ao-tuong-khong-gian"}, {text: "Quy tắc quái đàm", value: "quy-tac-quai-dam"}, 
+            {text: "Đấu khí", value: "dau-khi"}, {text: "Tiến hóa", value: "tien-hoa"}, {text: "Thú nhân", value: "thu-nhan"}, {text: "Thăng cấp lưu", value: "thang-cap-luu"}, {text: "Vô hạn lưu", value: "vo-han-luu"}, {text: "Báo thù", value: "bao-thu"}, {text: "Dị năng", value: "di-nang"}, 
+            {text: "Vu cổ", value: "vu-co"}, {text: "Huyết tộc", value: "huyet-toc"}, {text: "Thần thoại", value: "than-thoai"}, 
+            {text: "Đô thị tình duyên", value: "do-thi-tinh-duyen"}, {text: "Tam giáo cửu lưu", value: "tam-giao-cuu-luu"}, {text: "Hắc bang", value: "hac-bang"}, 
+            {text: "Chức trường", value: "chuc-truong"}, {text: "Giang hồ ân oán", value: "giang-ho-an-oan"}, {text: "Niên đại văn", value: "nien-dai-van"}, 
+            {text: "Truyện cổ tích", value: "truyen-co-tich"}, {text: "Tĩnh Khang chi sỉ", value: "tinh-khang-chi-si"}, {text: "Thiên tai", value: "thien-tai"}, 
+            {text: "Đệ tứ thiên tai", value: "de-tu-thien-tai"}, {text: "Lưu đày", value: "luu-day"},
+            {text: "Lịch sử", value: "lich-su"}, {text: "Giả tưởng lịch sử", value: "gia-tuong-lich-su"}, {text: "Giả tưởng", value: "gia-tuong"}, {text: "Hồng Kông", value: "hong-kong"}, 
+            {text: "Học viện quý tộc", value: "hoc-vien-quy-toc"}, {text: "Khoa cử", value: "khoa-cu"}, {text: "Làm giàu", value: "lam-giau"}, 
+            {text: "Đổ thạch", value: "do-thach"}, {text: "Phong thủy", value: "phong-thuy"}, {text: "Trộm mộ", value: "trom-mo"}, 
+            {text: "Giám bảo", value: "giam-bao"}, {text: "Phá án", value: "pha-an"}, {text: "Y thuật", value: "y-thuat"}, 
+            {text: "Giới giải trí Nhật", value: "gioi-giai-tri-nhat"}, {text: "Giới giải trí Hàn", value: "gioi-giai-tri-han"}, {text: "Giới giải trí Mỹ", value: "gioi-giai-tri-my"}, 
+            {text: "Võng phối", value: "vong-phoi"}, {text: "Phát sóng trực tiếp", value: "phat-song-truc-tiep"}, {text: "Võng hồng", value: "vong-hong"}, 
+            {text: "Viết văn", value: "viet-van"}, {text: "Chế tác", value: "che-tac"}, {text: "Võng du", value: "vong-du"}, 
+            {text: "Trò chơi", value: "tro-choi"}, {text: "Thẻ bài", value: "the-bai"}, {text: "Ngự thú", value: "ngu-thu"}, 
+            {text: "Thực tế ảo", value: "thuc-te-ao"}, {text: "Lữ hành", value: "lu-hanh"}, {text: "Mạo hiểm", value: "mao-hiem"}, 
+            {text: "Dưỡng oa", value: "duong-oa"}, {text: "Tổng nghệ", value: "tong-nghe"}, {text: "Oa tổng", value: "oa-tong"}, 
+            {text: "Luyến tổng", value: "luyen-tong"}, {text: "Giải mật", value: "giai-mat"}, {text: "Nghiên cứu khoa học", value: "nghien-cuu-khoa-hoc"}, 
+            {text: "Thể thao", value: "the-thao"}, {text: "Esport", value: "esport"}, {text: "Dân quốc", value: "dan-quoc"}, 
+            {text: "Phương Tây", value: "phuong-tay"}, {text: "Đô thị", value: "do-thi"}, {text: "Vườn trường", value: "vuon-truong"}, 
+            {text: "Hào môn", value: "hao-mon"}, {text: "Cung đình", value: "cung-dinh"}, {text: "Giang hồ", value: "giang-ho"}, 
+            {text: "Giới giải trí", value: "gioi-giai-tri"}, {text: "Hồng hoang", value: "hong-hoang"}
+        ],
+        "Thể Loại & Phong Cách": [
+            {text: "Tình cảm", value: "tinh-cam"}, {text: "CP phụ Nam x Nam", value: "cp-phu-nam-x-nam"}, {text: "CP phụ Nam x Nữ", value: "cp-phu-nam-x-nu"}, 
+            {text: "CP phụ Nữ x Nữ", value: "cp-phu-nu-x-nu"}, {text: "Làm sự nghiệp", value: "lam-su-nghiep"}, {text: "Sinh tồn", value: "sinh-ton"}, 
+            {text: "Tranh bá", value: "tranh-ba"}, {text: "Trinh thám", value: "trinh-tham"}, {text: "Điềm văn", value: "diem-van"}, {text: "Kinh dị", value: "kinh-di"}, 
+            {text: "Quan trường", value: "quan-truong"}, {text: "Kinh thương", value: "kinh-thuong"}, {text: "Quân sự", value: "quan-su"}, 
+            {text: "Xây dựng", value: "xay-dung"}, {text: "Làm ruộng", value: "lam-ruong"}, {text: "Cường thủ hào đoạt", value: "cuong-thu-hao-doat"}, {text: "Tu chân", value: "tu-chan"}, {text: "Linh dị thần quái", value: "linh-di-than-quai"}, 
+            {text: "Huyền học", value: "huyen-hoc"}, {text: "SM", value: "sm"}, {text: "Hắc ám", value: "hac-am"}, {text: "Cthulhu", value: "cthulhu"}, {text: "NTR", value: "ntr"}, 
+            {text: "PUA", value: "pua"}, {text: "PTSD", value: "ptsd"}, {text: "Phản sát hệ thống", value: "phan-sat-he-thong"}, 
+            {text: "Phản kịch bản", value: "phan-kich-ban"}, {text: "Phản bàn tay vàng", value: "phan-ban-tay-vang"}, {text: "Giả chết", value: "gia-chet"}, 
+            {text: "Quyền mưu", value: "quyen-muu"}, {text: "Phản anh hùng", value: "phan-anh-hung"}, {text: "Cải trang giả dạng", value: "cai-trang-gia-dang"}, 
+            {text: "Trưởng thành", value: "truong-thanh"}, {text: "Chủ thụ", value: "chu-thu"}, {text: "Pháo hôi", value: "phao-hoi"}, {text: "Ngụy NP", value: "nguy-np"}, {text: "Ngụy loạn luân", value: "nguy-loan-luan"}, {text: "Chủ công", value: "chu-cong"}, {text: "Chủ cốt truyện", value: "chu-cot-truyen"}, 
+            {text: "Nhẹ nhàng", value: "nhe-nhang"}, {text: "Đoản văn", value: "doan-van"}, {text: "Công lược nhiệm vụ", value: "cong-luoc-nhiem-vu"}, 
+            {text: "Thô tục", value: "tho-tuc"}, {text: "Bụng bầu play", value: "bung-bau-play"}, {text: "Brainrot", value: "brainrot"}, 
+            {text: "Nhiệt huyết", value: "nhiet-huyet"}, {text: "Thuần ái", value: "thuan-ai"}, {text: "Thuần thịt", value: "thuan-thit"}, {text: "Trước thụ truy sau công truy", value: "truoc-thu-truy-sau-cong-truy"}, {text: "Trước công truy sau thụ truy", value: "truoc-cong-truy-sau-thu-truy"}, {text: "Hiểu lầm", value: "hieu-lam"}, {text: "Chậm nhiệt", value: "cham-nhiet"}, {text: "Hàng ngày", value: "hang-ngay"}, {text: "Đời thường", value: "doi-thuong"},
+            {text: "Tế thủy trường lưu", value: "te-thuy-truong-luu"}, {text: "Bình dân sinh hoạt", value: "binh-dan-sinh-hoat"}, {text: "Lôi", value: "loi"}, 
+            {text: "Tam quan bất chính", value: "tam-quan-bat-chinh"}, {text: "Văn nghệ", value: "van-nghe"}, {text: "Hiện thực", value: "hien-thuc"}, 
+            {text: "Thiêu não", value: "thieu-nao"}, {text: "Ngược văn", value: "nguoc-van"}, {text: "Ngược tra", value: "nguoc-tra"}, {text: "Quân văn", value: "quan-van"}, 
+            {text: "Có H", value: "co-h"}, {text: "H văn", value: "h-van"}, {text: "Truyện ngắn", value: "truyen-ngan"}, {text: "Tiểu bạch văn", value: "tieu-bach-van"}, 
+            {text: "Thanh thủy văn", value: "thanh-thuy-van"}, {text: "Quốc lộ văn", value: "quoc-lo-van"}, {text: "Quần tượng", value: "quan-tuong"}, 
+            {text: "Huyền nghi", value: "huyen-nghi"}, {text: "Ăn dưa", value: "an-dua"}, {text: "Thiên chi kiêu tử", value: "thien-chi-kieu-tu"}, 
+            {text: "Chức nghiệp tinh anh", value: "chuc-nghiep-tinh-anh"}, {text: "Văn nhã bại hoại", value: "van-nha-bai-hoai"}, {text: "Long Ngạo Thiên", value: "long-ngao-thien"}, 
+            {text: "Vạn người ngại", value: "van-nguoi-ngai"}, {text: "Người qua đường", value: "nguoi-qua-duong"}, {text: "Vạn nhân mê", value: "van-nhan-me"}, {text: "Bạch nguyệt quang", value: "bach-nguyet-quang"}, 
+            {text: "Đoàn sủng", value: "doan-sung"}, {text: "Luyến ái não", value: "luyen-ai-nao"}, {text: "Sự nghiệp não", value: "su-nghiep-nao"}, 
+            {text: "Ngọt sủng", value: "ngot-sung"}, {text: "Chủng điền", value: "chung-dien"}, {text: "Cẩu huyết", value: "cau-huyet"}, 
+            {text: "Sảng văn", value: "sang-van"}, {text: "Hài hước", value: "hai-huoc"}, {text: "Chữa lành", value: "chua-lanh"}
+        ],
+        "Thuộc Tính Nhân Vật": [
+            {text: "Mỹ công", value: "my-cong"}, {text: "Tráng công", value: "trang-cong"}, {text: "Tra công", value: "tra-cong"}, 
+            {text: "Nhược công", value: "nhuoc-cong"}, {text: "Sửu công", value: "suu-cong"}, {text: "Bình phàm công", value: "binh-pham-cong"}, 
+            {text: "Phản công", value: "phan-cong"}, {text: "Nữ vương công", value: "nu-vuong-cong"}, {text: "Tổng tài công", value: "tong-tai-cong"}, 
+            {text: "Kim chủ công", value: "kim-chu-cong"}, {text: "Nam sủng công", value: "nam-sung-cong"}, {text: "Hoàng yến công", value: "hoang-yen-cong"}, 
+            {text: "Sư tôn công", value: "su-ton-cong"}, {text: "Đồ đệ công", value: "do-de-cong"}, {text: "Công YSL", value: "cong-ysl"}, 
+            {text: "Công không khiết cúc", value: "cong-khong-khiet-cuc"}, {text: "Công không khiết dưa", value: "cong-khong-khiet-dua"}, {text: "Thay công", value: "thay-cong"}, 
+            {text: "Thụ chuyển công", value: "thu-chuyen-cong"}, {text: "Công sinh con", value: "cong-sinh-con"}, {text: "Công song tính", value: "cong-song-tinh"}, {text: "Mỹ cường thảm", value: "my-cuong-tham"}, {text: "Công yêu thầm", value: "cong-yeu-tham"}, 
+            {text: "Công truy thụ", value: "cong-truy-thu"}, {text: "Công giả gái", value: "cong-gia-gai"}, {text: "Nhân thê công", value: "nhan-the-cong"}, 
+            {text: "Hắc bẩm sinh", value: "hac-bam-sinh"}, {text: "Tra bẩm sinh", value: "tra-bam-sinh"}, {text: "Nhân thê", value: "nhan-the"}, {text: "Lưu manh", value: "luu-manh"}, 
+            {text: "Khốc ca", value: "khoc-ca"}, {text: "Mặt dày", value: "mat-day"}, {text: "Ngoài lạnh trong nóng", value: "ngoai-lanh-trong-nong"}, {text: "Bình tĩnh", value: "binh-tinh"}, 
+            {text: "Phật hệ", value: "phat-he"}, {text: "Cá mặn", value: "ca-man"}, {text: "Dương quang", value: "duong-quang"}, 
+            {text: "Xã khủng", value: "xa-khung"}, {text: "Xã ngưu", value: "xa-nguu"}, {text: "Nô lệ tư bản", value: "no-le-tu-ban"}, 
+            {text: "Sa điêu", value: "sa-dieu"}, {text: "Chuunibyou", value: "chuunibyou"}, {text: "Cố chấp", value: "co-chap"}, 
+            {text: "Điên phê", value: "dien-phe"}, {text: "Hắc hóa", value: "hac-hoa"}, {text: "Ẩm thấp", value: "am-thap"}, 
+            {text: "Biệt nữu", value: "biet-nuu"}, {text: "Chó săn", value: "cho-san"}, {text: "Liếm cẩu", value: "liem-cau"}, 
+            {text: "Tâm cơ", value: "tam-co"}, {text: "Cực phẩm", value: "cuc-pham"}, {text: "Lạnh lùng", value: "lanh-lung"}, {text: "Ít nói", value: "it-noi"}, {text: "Trà xanh", value: "tra-xanh"}, 
+            {text: "Dâm đãng", value: "dam-dang"}, {text: "Bạch liên hoa", value: "bach-lien-hoa"}, {text: "Ấm áp", value: "am-ap"}, {text: "Ôn nhu", value: "on-nhu"}, {text: "Tự mình công lược", value: "tu-minh-cong-luoc"}, {text: "Hắc liên hoa", value: "hac-lien-hoa"}, 
+            {text: "Thố ti hoa", value: "tho-ti-hoa"}, {text: "Làm tinh", value: "lam-tinh"}, {text: "Đáng yêu", value: "dang-yeu"}, {text: "Hiền lành", value: "hien-lanh"}, {text: "Trung khuyển", value: "trung-khuyen"}, 
+            {text: "Diễn tinh", value: "dien-tinh"}, {text: "Tra thụ", value: "tra-thu"}, {text: "Câu hệ", value: "cau-he"}, {text: "Cha hệ", value: "cha-he"}, 
+            {text: "Cấm dục", value: "cam-duc"}, {text: "Thanh lãnh", value: "thanh-lanh"}, {text: "Cao lãnh chi hoa", value: "cao-lanh-chi-hoa"}, 
+            {text: "Si tình", value: "si-tinh"}, {text: "Vô tình", value: "vo-tinh"}, {text: "Kinh nguyệt", value: "kinh-nguyet"}, {text: "Yếu đuối", value: "yeu-duoi"}, {text: "Phong lưu", value: "phong-luu"}, 
+            {text: "Hải vương", value: "hai-vuong"}, {text: "Ngựa giống", value: "ngua-giong"}, {text: "Dấm vương", value: "dam-vuong"}, 
+            {text: "Chiếm hữu dục", value: "chiem-huu-duc"}, {text: "Biến thái", value: "bien-thai"}, {text: "Si hán", value: "si-han"}, 
+            {text: "Tháo hán", value: "thao-han"}, {text: "Nam mụ mụ", value: "nam-mu-mu"}, {text: "Ấm nam", value: "am-nam"}, 
+            {text: "Thẳng nam", value: "thang-nam"}, {text: "Tàn tật", value: "tan-tat"}, {text: "Khuyết tật", value: "khuyet-tat"}, 
+            {text: "Cắt miếng", value: "cat-mieng"}, {text: "Đa nhân cách", value: "da-nhan-cach"}, {text: "Mất trí nhớ", value: "mat-tri-nho"}, 
+            {text: "OOC", value: "ooc"}, {text: "Nhân vật thức tỉnh", value: "nhan-vat-thuc-tinh"},
+            {text: "Tráng thụ", value: "trang-thu"}, {text: "Mỹ nhân thụ", value: "my-nhan-thu"}, {text: "Mỹ cường", value: "my-cuong"}, {text: "Cường mỹ", value: "cuong-my"}, {text: "Tiện thụ", value: "tien-thu"}, 
+            {text: "Nhược thụ", value: "nhuoc-thu"}, {text: "Sửu thụ", value: "suu-thu"}, {text: "Bình phàm thụ", value: "binh-pham-thu"}, 
+            {text: "Hỗ thụ", value: "ho-thu"}, {text: "Nữ vương thụ", value: "nu-vuong-thu"}, {text: "Tổng tài thụ", value: "tong-tai-thu"}, 
+            {text: "Kim chủ thụ", value: "kim-chu-thu"}, {text: "Nam sủng thụ", value: "nam-sung-thu"}, {text: "Hoàng yến thụ", value: "hoang-yen-thu"}, 
+            {text: "Sư tôn thụ", value: "su-ton-thu"}, {text: "Đồ đệ thụ", value: "do-de-thu"}, {text: "Thụ cao hơn công", value: "thu-cao-hon-cong"}, 
+            {text: "Thụ tráng hơn công", value: "thu-trang-hon-cong"}, {text: "Thụ không khiết cúc", value: "thu-khong-khiet-cuc"}, {text: "Thụ không khiết dưa", value: "thu-khong-khiet-dua"}, 
+            {text: "Thay thụ", value: "thay-thu"}, {text: "Công chuyển thụ", value: "cong-chuyen-thu"}, {text: "Ăn nhờ ở đậu", value: "an-nho-o-dau"}, 
+            {text: "Thụ yêu thầm", value: "thu-yeu-tham"}, {text: "Thụ truy công", value: "thu-truy-cong"}, {text: "Thụ giả gái", value: "thu-gia-gai"}, 
+            {text: "Nhân thê thụ", value: "nhan-the-thu"}, {text: "Manh bảo", value: "manh-bao"}, {text: "Bệnh mỹ nhân", value: "benh-my-nhan"}, 
+            {text: "Bệnh kiều", value: "benh-kieu"}, {text: "Ngốc manh", value: "ngoc-manh"}, {text: "Ngây thơ", value: "ngay-tho"}, 
+            {text: "Ngu ngốc", value: "ngu-ngoc"}, {text: "Tự ti", value: "tu-ti"}, {text: "Kiều khí", value: "kieu-khi"}, 
+            {text: "Nhu nhược", value: "nhu-nhuoc"}, {text: "Thánh mẫu", value: "thanh-mau"}, {text: "Độc miệng", value: "doc-mieng"}, 
+            {text: "Phun tào", value: "phun-tao"}, {text: "Ác độc", value: "ac-doc"}, {text: "Trang bức", value: "trang-buc"}, 
+            {text: "Phúc hắc", value: "phuc-hac"}, {text: "Cơ trí", value: "co-tri"}
+        ],
+        "Phối Đối (Couple)": [
+            {text: "Cưới trước yêu sau", value: "cuoi-truoc-yeu-sau"}, {text: "Song hướng yêu thầm", value: "song-huong-yeu-tham"}, {text: "Hỗ sủng", value: "ho-sung"}, {text: "Hỗ sủng thiên công", value: "ho-sung-thien-cong"}, {text: "Hỗ sủng thiên thụ", value: "ho-sung-thien-thu"}, {text: "Công sủng thụ", value: "cong-sung-thu"}, {text: "Thụ sủng công", value: "thu-sung-cong"}, {text: "Sủng công", value: "sung-cong"}, {text: "Sủng thụ", value: "sung-thu"},
+            {text: "Mỹ công tráng thụ", value: "my-cong-trang-thu"}, {text: "Mỹ thụ tráng công", value: "my-thu-trang-cong"}, 
+            {text: "Tra công tiện thụ", value: "tra-cong-tien-thu"}, {text: "Tra thụ tiện công", value: "tra-thu-tien-cong"}, 
+            {text: "Cường nhược", value: "cuong-nhuoc"}, {text: "Nhược cường", value: "nhuoc-cuong"}, {text: "Nhược nhược", value: "nhuoc-nhuoc"}, 
+            {text: "Cường cường", value: "cuong-cuong"}, {text: "Nhiều CP", value: "nhieu-cp"}, {text: "18+", value: "18"}, 
+            {text: "Loạn luân", value: "loan-luan"}, {text: "Kế mẫu", value: "ke-mau"}, {text: "Song khiết", value: "song-khiet"}, 
+            {text: "Phi song khiết", value: "phi-song-khiet"}, {text: "Thanh mai trúc mã", value: "thanh-mai-truc-ma"}, {text: "Hoan hỉ oan gia", value: "hoan-hi-oan-gia"}, 
+            {text: "Nhất kiến chung tình", value: "nhat-kien-chung-tinh"}, {text: "Tình hữu độc chung", value: "tinh-huu-doc-chung"}, 
+            {text: "Gương vỡ không lành", value: "guong-vo-khong-lanh"}, {text: "Bầu trước yêu sau", value: "bau-truoc-yeu-sau"}, 
+            {text: "Khế ước tình nhân", value: "khe-uoc-tinh-nhan"}, {text: "Từ giả thành thật", value: "tu-gia-thanh-that"}, 
+            {text: "Kiếp trước kiếp này", value: "kiep-truoc-kiep-nay"}, {text: "Cận thủy lâu đài", value: "can-thuy-lau-dai"}, 
+            {text: "Gương vỡ lại lành", value: "guong-vo-lai-lanh"}, {text: "Tương ái tương sát", value: "tuong-ai-tuong-sat"}, {text: "Rape", value: "rape"}, 
+            {text: "Ngược luyến", value: "nguoc-luyen"}, {text: "chua ngọt", value: "chua-ngot"}, {text: "Lâu ngày sinh tình", value: "lau-ngay-sinh-tinh"}, 
+            {text: "Lâu ngày gặp lại", value: "lau-ngay-gap-lai"}, {text: "Duyên trời tác hợp", value: "duyen-troi-tac-hop"}, 
+            {text: "Trâu già gặm cỏ non", value: "trau-gia-gam-co-non"}, {text: "Sát ái chứng đạo", value: "sat-ai-chung-dao"}, 
+            {text: "Chế phục tình duyên", value: "che-phuc-tinh-duyen"}, {text: "Cưỡng chế ái", value: "cuong-che-ai"}, {text: "Giam cầm", value: "giam-cam"}, 
+            {text: "Bao nuôi", value: "bao-nuoi"}, {text: "Dạy dỗ", value: "day-do"}, {text: "Hợp đồng hôn nhân", value: "hop-dong-hon-nhan"}, {text: "Từ hôn", value: "tu-hon"}, 
+            {text: "Tái hôn", value: "tai-hon"}, {text: "Liên hôn", value: "lien-hon"}, {text: "Gả thay", value: "ga-thay"}, 
+            {text: "Thế thân", value: "the-than"}, {text: "Song thế thân", value: "song-the-than"}, {text: "Dưỡng thành", value: "duong-thanh"}, 
+            {text: "Cứu rỗi", value: "cuu-roi"}, {text: "Tình bạn", value: "tinh-ban"}, {text: "Tình thân", value: "tinh-than"}, 
+            {text: "Tình địch", value: "tinh-dich"}, {text: "Đối thủ sống còn", value: "doi-thu-song-con"}, {text: "Mang bầu chạy", value: "mang-bau-chay"}, 
+            {text: "Bạn cùng phòng", value: "ban-cung-phong"}, {text: "Cấp trên cấp dưới", value: "cap-tren-cap-duoi"}, {text: "Thẳng bẻ cong", value: "thang-be-cong"}, 
+            {text: "Yêu qua mạng", value: "yeu-qua-mang"}, {text: "Niên hạ", value: "nien-ha"}, {text: "Đồng niên", value: "dong-nien"}, {text: "Niên thượng", value: "nien-thuong"}, 
+            {text: "Truy phu hỏa táng tràng", value: "truy-phu-hoa-tang-trang"}, {text: "Truy thê hỏa táng tràng", value: "truy-the-hoa-tang-trang"},
+            {text: "1v1", value: "1v1"}, {text: "NP", value: "np"}, {text: "Hỗ công", value: "ho-cong"}, {text: "Phụ tử", value: "phu-tu"}, {text: "Huynh đệ", value: "huynh-de"}
+        ],
+        "Thiết Lập Đặc Biệt": [
+            {text: "Song JJ", value: "song-jj"}, {text: "ABO", value: "abo"}, {text: "EABO", value: "eabo"}, {text: "AxO", value: "axo"}, {text: "AxB", value: "axb"}, {text: "AxA", value: "axa"}, {text: "AxE", value: "axe"}, {text: "ExA", value: "exa"}, {text: "ExO", value: "exo"}, {text: "ExB", value: "exb"}, {text: "ExE", value: "exe"}, {text: "BxA", value: "bxa"}, {text: "BxO", value: "bxo"}, {text: "BxB", value: "bxb"}, {text: "BxE", value: "bxe"}, {text: "OxA", value: "oxa"}, {text: "OxB", value: "oxb"}, {text: "OxO", value: "oxo"}, {text: "OxE", value: "oxe"}, {text: "Lính gác dẫn đường", value: "linh-gac-dan-duong"}, 
+            {text: "Sinh tử", value: "sinh-tu"}, {text: "Song tính", value: "song-tinh"}, {text: "Sản nhũ", value: "san-nhu"}, 
+            {text: "Tùy thân không gian", value: "tuy-than-khong-gian"}, {text: "Linh tuyền", value: "linh-tuyen"}, {text: "Hệ thống", value: "he-thong"}, 
+            {text: "Song hệ thống", value: "song-he-thong"}, {text: "Thương thành", value: "thuong-thanh"}, {text: "Rút thăm trúng thưởng", value: "rut-tham-trung-thuong"}, 
+            {text: "Tool mô phỏng", value: "tool-mo-phong"}, {text: "Hợp thành", value: "hop-thanh"}, {text: "App", value: "app"}, 
+            {text: "Group chat", value: "group-chat"}, {text: "Cẩm lý thể chất", value: "cam-ly-the-chat"}, {text: "Thấu thị", value: "thau-thi"}, 
+            {text: "Thôi miên", value: "thoi-mien"}, {text: "Đọc tâm", value: "doc-tam"}, {text: "Ngôn linh", value: "ngon-linh"}, 
+            {text: "Đánh dấu", value: "danh-dau"}, {text: "Đọc đương", value: "doc-duong"}, {text: "Hồi đương", value: "hoi-duong"}, 
+            {text: "Vô hiệu hóa", value: "vo-hieu-hoa"}, {text: "Kịch thấu", value: "kich-thau"}, {text: "Tiên tri", value: "tien-tri"}, 
+            {text: "Ngộ tính", value: "ngo-tinh"}, {text: "Làn đạn", value: "lan-dan"}, {text: "Nghe hiểu động vật", value: "nghe-hieu-dong-vat"}, 
+            {text: "Nghe hiểu thực vật", value: "nghe-hieu-thuc-vat"}, {text: "Duy ngã độc pháp", value: "duy-nga-doc-phap"}, {text: "Bàn tay vàng", value: "ban-tay-vang"}, 
+            {text: "Vô hệ thống", value: "vo-he-thong"}, {text: "Vô bàn tay vàng", value: "vo-ban-tay-vang"}, {text: "Nộp bàn tay vàng", value: "nop-ban-tay-vang"}, 
+            {text: "Tùy thân gia gia", value: "tuy-than-gia-gia"}, {text: "Mỹ thực", value: "my-thuc"}, {text: "Cơ giáp", value: "co-giap"}, 
+            {text: "Trùng tộc", value: "trung-toc"}, {text: "Xúc tu", value: "xuc-tu"}
+        ],
+        "Xuyên Không & Trọng Sinh": [
+            {text: "Thai xuyên", value: "thai-xuyen"}, {text: "Thân xuyên", value: "than-xuyen"}, {text: "Xuyên không", value: "xuyen-khong"}, {text: "Xuyên game", value: "xuyen-game"}, 
+            {text: "Xuyên chậm", value: "xuyen-cham"}, {text: "Cổ xuyên kim", value: "co-xuyen-kim"}, {text: "Cổ đại xuyên tương lai", value: "co-dai-xuyen-tuong-lai"}, 
+            {text: "Tương lai xuyên hiện đại", value: "tuong-lai-xuyen-hien-dai"}, {text: "Tương lai xuyên cổ đại", value: "tuong-lai-xuyen-co-dai"}, 
+            {text: "Đàn xuyên", value: "dan-xuyen"}, {text: "Song xuyên", value: "song-xuyen"}, {text: "Xuyên về thế giới cũ", value: "xuyen-ve-the-gioi-cu"}, 
+            {text: "Song trọng sinh", value: "song-trong-sinh"}, {text: "Hoán đổi linh hồn", value: "hoan-doi-linh-hon"}, {text: "Chết đi sống lại", value: "chet-di-song-lai"}, 
+            {text: "Qua lại thời không", value: "qua-lai-thoi-khong"}, {text: "Vị diện", value: "vi-dien"}, {text: "Thời Xuân Thu", value: "thoi-xuan-thu"}, 
+            {text: "Thời Chiến Quốc", value: "thoi-chien-quoc"}, {text: "Đại Tần", value: "dai-tan"}, {text: "Đại Hán", value: "dai-han"}, 
+            {text: "Đại Đường", value: "dai-duong"}, {text: "Đại Minh", value: "dai-minh"}, {text: "Đại Thanh", value: "dai-thanh"}, 
+            {text: "Ngôi thứ nhất", value: "ngoi-thu-nhat"}, {text: "Xem ảnh thể", value: "xem-anh-the"}, {text: "Diễn đàn thể", value: "dien-dan-the"}, 
+            {text: "Đối thoại thể", value: "doi-thoai-the"}, {text: "Đa thị giác", value: "da-thi-giac"}, {text: "Song thị giác", value: "song-thi-giac"},
+            {text: "Cường giả trở về", value: "cuong-gia-tro-ve"}, {text: "Phản phái trọng sinh", value: "phan-phai-trong-sinh"}, 
+            {text: "Phản phái xuyên việt", value: "phan-phai-xuyen-viet"}, {text: "Vai phụ trọng sinh", value: "vai-phu-trong-sinh"}, 
+            {text: "Vai phụ xuyên việt", value: "vai-phu-xuyen-viet"}, {text: "Hoàng đế xuyên việt", value: "hoang-de-xuyen-viet"}, 
+            {text: "Xuyên thành vai chính", value: "xuyen-thanh-vai-chinh"}, {text: "Xuyên thành vai ác", value: "xuyen-thanh-vai-ac"}, 
+            {text: "Xuyên thành cha mẹ", value: "xuyen-thanh-cha-me"}, {text: "Cả nhà đại lão", value: "ca-nha-dai-lao"}, {text: "Cả nhà vai ác", value: "ca-nha-vai-ac"}, 
+            {text: "Main là động vật", value: "main-la-dong-vat"}, {text: "Main là thực vật", value: "main-la-thuc-vat"}, {text: "Main là đồ vật", value: "main-la-do-vat"}, 
+            {text: "Main là hệ thống", value: "main-la-he-thong"}, {text: "Main là thiên đạo", value: "main-la-thien-dao"}, {text: "Thật giả thiếu gia", value: "that-gia-thieu-gia"}, 
+            {text: "Trùm cuối", value: "trum-cuoi"}, {text: "Thánh tử", value: "thanh-tu"}, {text: "Nam biến nữ", value: "nam-bien-nu"}, 
+            {text: "Tiểu tam", value: "tieu-tam"}, {text: "Trợ lý", value: "tro-ly"}, {text: "Con nuôi", value: "con-nuoi"}, 
+            {text: "Song sinh", value: "song-sinh"}, {text: "Xuyên việt", value: "xuyen-viet"}, {text: "Xuyên thư", value: "xuyen-thu"}, 
+            {text: "Xuyên nhanh", value: "xuyen-nhanh"}, {text: "Trọng sinh", value: "trong-sinh"}
+        ],
+        "Thân Phận & Nghề Nghiệp": [
+            {text: "Lão sư", value: "lao-su"}, {text: "Họa sĩ", value: "hoa-si"}, {text: "IT", value: "it"}, {text: "Tác giả", value: "tac-gia"}, 
+            {text: "Điệp viên", value: "diep-vien"}, {text: "Đặc công", value: "dac-cong"}, {text: "Cảnh sát", value: "canh-sat"}, 
+            {text: "Bộ đội đặc chủng", value: "bo-doi-dac-chung"}, {text: "Pháp y", value: "phap-y"}, {text: "Quản gia", value: "quan-gia"}, 
+            {text: "Tông chủ", value: "tong-chu"}, {text: "Đế vương", value: "de-vuong"}, {text: "Hoàng hậu", value: "hoang-hau"}, 
+            {text: "Hoàng tử", value: "hoang-tu"}, {text: "Thủ phụ", value: "thu-phu"}, {text: "Quyền thần", value: "quyen-than"}, 
+            {text: "Lĩnh chủ", value: "linh-chu"}, {text: "Gia chủ", value: "gia-chu"}, {text: "Xướng kỹ", value: "xuong-ky"}, 
+            {text: "Thái y", value: "thai-y"}, {text: "Đạo tặc", value: "dao-tac"}, {text: "Sát thủ", value: "sat-thu"}, 
+            {text: "Hòa thượng", value: "hoa-thuong"}, {text: "Thái giám thật", value: "thai-giam-that"}, {text: "Thái giám giả", value: "thai-giam-gia"}, 
+            {text: "Nguyên phối", value: "nguyen-phoi"}, {text: "Chủ mẫu", value: "chu-mau"}, {text: "Thông phòng", value: "thong-phong"}, 
+            {text: "Tiểu thiếp", value: "tieu-thiep"}, {text: "Ngoại thất", value: "ngoai-that"}, {text: "Quả phụ", value: "qua-phu"}, 
+            {text: "Mỹ nhân ngư", value: "my-nhan-ngu"}, {text: "Tang thi", value: "tang-thi"}, {text: "Mị ma", value: "mi-ma"}, 
+            {text: "Tinh linh", value: "tinh-linh"}, {text: "Ma quỷ", value: "ma-quy"}, {text: "Thần minh", value: "than-minh"}, 
+            {text: "Dũng giả", value: "dung-gia"}, {text: "Phi nhân loại", value: "phi-nhan-loai"}, {text: "Giả tưởng sinh vật", value: "gia-tuong-sinh-vat"}, 
+            {text: "Ngoại tinh sinh vật", value: "ngoai-tinh-sinh-vat"}, {text: "Ô nhiễm vật", value: "o-nhiem-vat"}, {text: "Chủ bá", value: "chu-ba"}, 
+            {text: "Người chơi", value: "nguoi-choi"}, {text: "Dân bản xứ", value: "dan-ban-xu"}, {text: "NPC", value: "npc"}, 
+            {text: "Nhân vật 2D", value: "nhan-vat-2d"}, {text: "Học bá", value: "hoc-ba"}, {text: "Học tra", value: "hoc-tra"}, 
+            {text: "Giáo bá", value: "giao-ba"}, {text: "Giáo thảo", value: "giao-thao"}, {text: "Thiên tài", value: "thien-tai"}
+        ],
+        "Đồng nhân": [ 
+            {text: "Harry Potter", value: "harry-potter"}, {text: "Marvel", value: "marvel"}, {text: "DC", value: "dc"}, 
+            {text: "Naruto", value: "naruto"}, {text: "Conan", value: "conan"}, {text: "Kiếm Tam", value: "kiem-tam"}, 
+            {text: "Âm Dương Sư", value: "am-duong-su"}, {text: "Genshin", value: "genshin"}, {text: "Honkai", value: "honkai"}
+        ]
+    };
+
+    // --- ELEMENTS ---
+    const selectedContainerEl = document.getElementById('selected-container');
+    const searchInput = document.getElementById('search-input');
+    const submitBtn = document.getElementById('submit-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const toggleViewBtn = document.getElementById('toggle-view-btn');
+    
+    // Container
+    const generalArea = document.getElementById('general-area');
+    const detailedArea = document.getElementById('detailed-area');
+    const mainScroller = document.getElementById('main-scroller');
+
+    let selectedTags = new Set();
+    let isListExpanded = false; 
+
+    // --- RENDER ---
+    function renderTags() {
+        // 1. Render Bộ Lọc Chung
+        generalArea.innerHTML = '';
+        const generalTitle = document.createElement('div');
+        generalTitle.className = 'section-title';
+        generalTitle.textContent = 'Bộ Lọc Chung';
+        generalArea.appendChild(generalTitle);
+
+        for (const [subGroup, tags] of Object.entries(generalFiltersData)) {
+            const groupContainer = document.createElement('div');
+            groupContainer.className = 'sub-section-container';
+
+            const subTitle = document.createElement('div');
+            subTitle.className = 'sub-section-title';
+            subTitle.textContent = subGroup;
+            groupContainer.appendChild(subTitle);
+
+            const grid = document.createElement('div');
+            grid.className = 'tag-grid';
+            tags.forEach(tag => grid.appendChild(createTagElement(tag)));
+            groupContainer.appendChild(grid);
+            
+            generalArea.appendChild(groupContainer);
+        }
+
+        // 2. Render Các Tag Khác
+        detailedArea.innerHTML = '';
+        for (const [groupName, tags] of Object.entries(detailedTagsData)) {
+            const groupContainer = document.createElement('div');
+            groupContainer.className = 'detailed-group-container section-container';
+            groupContainer.classList.add('d-none'); // Mặc định ẩn
+
+            const groupTitle = document.createElement('div');
+            groupTitle.className = 'section-title';
+            groupTitle.textContent = groupName;
+            groupContainer.appendChild(groupTitle);
+
+            const grid = document.createElement('div');
+            grid.className = 'tag-grid';
+            tags.forEach(tag => grid.appendChild(createTagElement(tag)));
+            groupContainer.appendChild(grid);
+            
+            detailedArea.appendChild(groupContainer);
+        }
+    }
+
+    function createTagElement(tag) {
+        const el = document.createElement('div');
+        el.className = 'tag-item';
+        el.textContent = tag.text;
+        el.dataset.slug = tag.value;
+        el.dataset.text = tag.text;
+        el.addEventListener('click', () => toggleTag(tag.value));
+        return el;
+    }
+
+    // --- LOGIC CHỌN TAG ---
+    function toggleTag(slug) {
+        if (selectedTags.has(slug)) selectedTags.delete(slug);
+        else selectedTags.add(slug);
+        updateUI();
+    }
+
+    function updateUI() {
+        document.querySelectorAll('.tag-item').forEach(el => {
+            el.classList.toggle('active', selectedTags.has(el.dataset.slug));
+        });
+
+        selectedContainerEl.innerHTML = '';
+        if (selectedTags.size === 0) {
+            selectedContainerEl.innerHTML = '<div class="empty-placeholder">Chưa chọn tag nào...</div>';
+            return;
+        }
+
+        selectedTags.forEach(slug => {
+            let text = slug;
+            const findIn = (data) => {
+                for(const list of Object.values(data)) {
+                    for(const t of list) if(t.value === slug) return t.text;
+                }
+                return null;
+            }
+            text = findIn(generalFiltersData) || findIn(detailedTagsData) || slug;
+
+            const chip = document.createElement('div');
+            chip.className = 'chip';
+            chip.innerHTML = `${text} &times;`;
+            chip.onclick = () => toggleTag(slug);
+            selectedContainerEl.appendChild(chip);
+        });
+        selectedContainerEl.scrollLeft = selectedContainerEl.scrollWidth;
+    }
+
+    // --- LOGIC TÌM KIẾM ---
+    function performSearch(term) {
+        // Cuộn ngay lập tức về đầu danh sách để người dùng thấy kết quả
+        // Đây là tính năng giúp "không phải lướt lên thủ công"
+        mainScroller.scrollTop = 0;
+
+        const generalContainers = generalArea.querySelectorAll('.sub-section-container');
+        let generalHasMatch = false;
+
+        generalContainers.forEach(container => {
+            const items = container.querySelectorAll('.tag-item');
+            let groupMatch = false;
+            items.forEach(item => {
+                const text = item.dataset.text.toLowerCase();
+                const isMatch = term === '' || text.includes(term);
+                item.classList.toggle('hidden', !isMatch);
+                if (isMatch) { groupMatch = true; generalHasMatch = true; }
+            });
+            container.classList.toggle('d-none', term !== '' && !groupMatch);
+        });
+
+        const generalTitle = generalArea.querySelector('.section-title');
+        if (generalTitle) generalTitle.classList.toggle('d-none', term !== '' && !generalHasMatch);
+        
+        const detailedGroups = detailedArea.querySelectorAll('.detailed-group-container');
+        detailedGroups.forEach(group => {
+            const items = group.querySelectorAll('.tag-item');
+            let groupMatch = false;
+            items.forEach(item => {
+                const text = item.dataset.text.toLowerCase();
+                const isMatch = term === '' || text.includes(term);
+                item.classList.toggle('hidden', !isMatch);
+                if (isMatch) groupMatch = true;
+            });
+            if (term !== '') {
+                group.classList.toggle('d-none', !groupMatch);
+            } else {
+                group.classList.toggle('d-none', !isListExpanded);
+            }
+        });
+    }
+
+    searchInput.addEventListener('input', (e) => {
+        performSearch(e.target.value.toLowerCase().trim());
+    });
+
+    // --- TOGGLE BUTTON ---
+    toggleViewBtn.addEventListener('click', () => {
+        isListExpanded = !isListExpanded;
+        if (searchInput.value.trim() !== '') searchInput.value = '';
+        
+        const detailedGroups = detailedArea.querySelectorAll('.detailed-group-container');
+        detailedGroups.forEach(g => g.classList.toggle('d-none', !isListExpanded));
+        
+        toggleViewBtn.innerHTML = isListExpanded ? '👁️ Ẩn Tag' : '👁️ Hiện Tag';
+        performSearch(''); 
+    });
+
+    // --- BUTTONS ---
+    resetBtn.addEventListener('click', () => {
+        selectedTags.clear();
+        searchInput.value = '';
+        performSearch('');
+        updateUI();
+    });
+
+    submitBtn.addEventListener('click', () => {
+        if (selectedTags.size === 0) {
+            alert('Bạn chưa chọn tag nào!'); return;
+        }
+        const slugs = Array.from(selectedTags);
+        window.open('https://tonghopdammeoo.wordpress.com/tag/' + slugs.join('+'), '_blank');
+    });
+
+    // START
+    renderTags();
+});
+</script>
+</body>
+</html>
