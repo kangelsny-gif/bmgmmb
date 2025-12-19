@@ -150,6 +150,13 @@
     .btn-submit { background: var(--color-primary); color: #fff; flex: 2; box-shadow: 0 4px 6px rgba(147, 51, 234, 0.2); }
     .btn-reset { background: #f3f4f6; color: #4b5563; flex: 1; }
 
+    /* --- FIX LỖI KHÔNG ẨN TAG TRÊN PC --- */
+    /* Dùng ID cha (#app-container) để tăng độ ưu tiên mạnh hơn mọi class khác */
+    #app-container .d-none, 
+    #app-container .hidden { 
+        display: none !important; 
+    }
+
 </style>
 </head>
 <body>
@@ -587,3 +594,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
+
